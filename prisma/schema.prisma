@@ -1,0 +1,51 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Book {
+  id          Int       @id @default(autoincrement())
+  title       String
+  author      String
+  description String?
+  price       Decimal   @db.Decimal(10, 2)
+  coverImage  String?
+  createdAt   DateTime  @default(now())
+
+  chapters    Chapter[]
+  purchases   Purchase[]
+}
+
+model Chapter {
+  id            Int      @id @default(autoincrement())
+  bookId        Int
+  chapterNumber Int
+  title         String
+  content       String
+  isFree        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, chapterNumber])
+}
+
+model Purchase {
+  id            Int @id @default(autoincrement())
+  bookId        Int
+  email         String?
+  amount        Decimal @db.Decimal(10, 2)
+  status        String  @default("completed")
+  transactionId String?
+  createdAt     DateTime @default(now())
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([bookId])
+  @@index([email])
+
+}
