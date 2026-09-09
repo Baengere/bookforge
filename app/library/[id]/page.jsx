@@ -4,7 +4,7 @@ import { ArrowLeft, BookOpen } from "@/lib/icons";
 
 async function getBook(id) {
   const response = await fetch(
-    `http://localhost:3000/api/books/${id}`,
+    `/api/books/${id}`,
     {
       cache: "no-store",
     }

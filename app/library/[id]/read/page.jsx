@@ -5,7 +5,7 @@ import ChapterReader from "@/components/reader/ChapterReader";
 
 async function getBook(id) {
   const response = await fetch(
-    `http://localhost:3000/api/books/${id}`,
+    `/api/books/${id}`,
     {
       cache: "no-store",
     }
@@ -20,7 +20,7 @@ async function getBook(id) {
 
 async function checkPurchase(bookId, email) {
   const response = await fetch(
-    "http://localhost:3000/api/purchases/check",
+    "/api/purchases/check",
     {
       method: "POST",
       headers: {
