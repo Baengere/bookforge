@@ -1,21 +1,18 @@
 import Link from "next/link";
+import {prisma} from "@/lib/prisma";
 
 
 import ChapterReader from "@/components/reader/ChapterReader";
 
 async function getBook(id) {
-  const response = await fetch(
-    `/api/books/${id}`,
-    {
-      cache: "no-store",
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Could not load book");
-  }
-
-  return response.json();
+  return prisma.book.findUnique({
+    where: {
+      id: Number(id),
+    },
+    include: {
+      chapters: true,
+    },
+  });
 }
 
 async function checkPurchase(bookId, email) {

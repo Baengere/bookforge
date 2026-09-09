@@ -1,20 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, BookOpen } from "@/lib/icons";
+import {prisma} from "@/lib/prisma";
+
 
 async function getBook(id) {
-  const response = await fetch(
-    `/api/books/${id}`,
-    {
-      cache: "no-store",
-    }
-  );
-
-  if (!response.ok) {
-    return null;
-  }
-
-  return response.json();
+  return prisma.book.findUnique({
+    where: {
+      id: Number(id),
+    },
+    include: {
+      chapters: true,
+    },
+  });
 }
 
 export default async function BookPage({ params }) {
