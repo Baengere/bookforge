@@ -16,28 +16,15 @@ async function getBook(id) {
 }
 
 async function checkPurchase(bookId, email) {
-  const response = await fetch(
-    "/api/purchases/check",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        bookId,
-        email,
-      }),
-      cache: "no-store",
-    }
-  );
+  const purchase = await prisma.purchase.findFirst({
+    where: {
+      bookId,
+      email,
+      status: "completed",
+    },
+  });
 
-  if (!response.ok) {
-    return false;
-  }
-
-  const data = await response.json();
-
-  return data.purchased;
+  return Boolean(purchase);
 }
 
 export default async function ReadPage({ params, searchParams }) {
