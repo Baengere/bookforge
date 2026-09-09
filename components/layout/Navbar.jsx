@@ -27,7 +27,7 @@ export default function Navbar(){
                 </Link>
 
                 <Link
-                    href="/about"
+                    href="/#about"
                     className="text-zinc-300 transition hover:text-white"
                     >
                     About

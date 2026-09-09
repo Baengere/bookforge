@@ -32,7 +32,7 @@ export default function Footer() {
             </Link>
 
             <Link
-              href="/#about"
+              href="/bout"
               className="transition hover:text-amber-400"
             >
               About
