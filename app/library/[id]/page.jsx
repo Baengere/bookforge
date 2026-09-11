@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, BookOpen } from "@/lib/icons";
-import {prisma} from "@/lib/prisma";
-
+import { prisma } from "@/lib/prisma";
 
 async function getBook(id) {
   return prisma.book.findUnique({
@@ -24,9 +23,7 @@ export default async function BookPage({ params }) {
     return (
       <main className="min-h-screen bg-[#0B0B0B] px-6 py-20 text-zinc-100">
         <div className="mx-auto max-w-4xl">
-          <h1 className="text-3xl font-bold">
-            Book not found
-          </h1>
+          <h1 className="text-3xl font-bold">Book not found</h1>
 
           <Link
             href="/library"
@@ -39,15 +36,19 @@ export default async function BookPage({ params }) {
     );
   }
 
+  // Prisma Decimal objects must be converted to plain values
+  // before being passed through the React/Next.js component tree.
+  const price = Number(book.price);
+
   const chapterOne = book.chapters?.find(
     (chapter) => chapter.chapterNumber === 1
   );
 
   return (
     <main className="min-h-screen bg-[#0B0B0B] text-zinc-100">
-
       <div className="mx-auto max-w-6xl px-6 py-16">
 
+        {/* Back to Library */}
         <Link
           href="/library"
           className="inline-flex items-center gap-2 text-sm text-zinc-500 transition hover:text-amber-400"
@@ -56,8 +57,10 @@ export default async function BookPage({ params }) {
           Back to Library
         </Link>
 
+        {/* Book Details */}
         <section className="mt-12 grid gap-12 md:grid-cols-[320px_1fr]">
 
+          {/* Cover */}
           <div>
             {book.coverImage && (
               <Image
@@ -70,6 +73,7 @@ export default async function BookPage({ params }) {
             )}
           </div>
 
+          {/* Information */}
           <div className="flex flex-col justify-center">
 
             <p className="text-sm uppercase tracking-[0.3em] text-amber-500">
@@ -90,6 +94,7 @@ export default async function BookPage({ params }) {
               </p>
             )}
 
+            {/* Actions */}
             <div className="mt-10 flex flex-wrap gap-4">
 
               <Link
@@ -104,15 +109,14 @@ export default async function BookPage({ params }) {
                 href={`/buy/${book.id}`}
                 className="inline-flex items-center rounded-xl border border-zinc-700 px-6 py-3 font-semibold text-zinc-100 transition hover:border-amber-500 hover:text-amber-400"
               >
-                Buy The Book · KES {book.price}
+                Buy The Book · KES {price}
               </Link>
 
             </div>
-
           </div>
-
         </section>
 
+        {/* Free Preview */}
         {chapterOne && (
           <section className="mt-24 max-w-3xl">
 
@@ -143,19 +147,20 @@ export default async function BookPage({ params }) {
                 {chapterOne.content}
               </p>
 
-              
+              {/* Read Chapter One */}
+              <Link
+                href={`/library/${book.id}/read`}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-3 font-semibold text-black transition hover:bg-amber-400"
+              >
                 <BookOpen className="h-5 w-5" />
-                Read Chapter one
-                
-              
+                Read Chapter One
+              </Link>
 
             </div>
-
           </section>
         )}
 
       </div>
-
     </main>
   );
 }
