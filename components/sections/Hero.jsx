@@ -27,7 +27,7 @@ export default function Hero() {
           </p>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="/library/metal-within/read">
+              <Link href="/library/1/read">
                   <Button size="lg">
                     <BookOpen className="mr-2 h-5 w-5" />
                       Read Chapter One
