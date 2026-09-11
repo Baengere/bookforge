@@ -61,6 +61,21 @@ export default function ChapterReader({
     };
   }, []);
 
+  function goToChapter(chapterNumber) {
+    const chapter = document.querySelector(
+      `[data-chapter="${chapterNumber}"]`
+    );
+
+    if (!chapter) {
+      return;
+    }
+
+    chapter.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
   return (
     <main className="relative min-h-screen bg-[#0f0f10] text-zinc-100">
 
@@ -105,8 +120,27 @@ export default function ChapterReader({
         </div>
 
         {/* Reading status */}
-        <div className="sticky top-1 z-40 mt-6 flex justify-between border-y border-zinc-800/60 bg-[#0f0f10]/90 px-1 py-3 text-xs text-zinc-500 backdrop-blur">
-          <span className="truncate pr-4">
+        <div
+          className="
+            sticky
+            top-1
+            z-40
+            mt-6
+            flex
+            items-center
+            justify-between
+            gap-4
+            border-y
+            border-zinc-800/60
+            bg-[#0f0f10]/90
+            px-1
+            py-3
+            text-xs
+            text-zinc-500
+            backdrop-blur
+          "
+        >
+          <span className="truncate">
             {bookTitle}
           </span>
 
@@ -115,7 +149,7 @@ export default function ChapterReader({
           </span>
         </div>
 
-        {/* Chapter heading */}
+        {/* Book heading */}
         <header className="pb-12 pt-14 sm:pb-16 sm:pt-16">
 
           <p className="text-sm uppercase tracking-[0.35em] text-amber-400">
@@ -149,6 +183,61 @@ export default function ChapterReader({
         >
           {children}
         </article>
+
+        {/* Chapter navigation */}
+        {chapterCount > 1 && (
+          <div className="my-20 border-t border-zinc-800 pt-8">
+
+            <div className="flex items-center justify-between gap-4">
+
+              {currentChapter > 1 ? (
+                <button
+                  type="button"
+                  onClick={() => goToChapter(currentChapter - 1)}
+                  className="
+                    rounded-xl
+                    border
+                    border-zinc-700
+                    px-5
+                    py-3
+                    text-sm
+                    font-medium
+                    text-zinc-300
+                    transition
+                    hover:border-amber-500
+                    hover:text-amber-400
+                  "
+                >
+                  ← Previous Chapter
+                </button>
+              ) : (
+                <div />
+              )}
+
+              {currentChapter < chapterCount && (
+                <button
+                  type="button"
+                  onClick={() => goToChapter(currentChapter + 1)}
+                  className="
+                    rounded-xl
+                    bg-amber-500
+                    px-5
+                    py-3
+                    text-sm
+                    font-semibold
+                    text-black
+                    transition
+                    hover:bg-amber-400
+                  "
+                >
+                  Next Chapter →
+                </button>
+              )}
+
+            </div>
+
+          </div>
+        )}
 
       </div>
 
