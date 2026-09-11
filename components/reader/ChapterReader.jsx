@@ -1,8 +1,66 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Clock, BookOpen } from "@/lib/icons";
+"use client";
 
-export default function ChapterReader({ children }) {
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ArrowLeft, BookOpen } from "@/lib/icons";
+
+export default function ChapterReader({
+  children,
+  bookTitle,
+  chapterCount,
+}) {
+  const [progress, setProgress] = useState(0);
+  const [currentChapter, setCurrentChapter] = useState(1);
+
+  useEffect(() => {
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const documentHeight =
+        document.documentElement.scrollHeight - window.innerHeight;
+
+      if (documentHeight <= 0) {
+        setProgress(0);
+        return;
+      }
+
+      const percentage = (scrollTop / documentHeight) * 100;
+
+      setProgress(Math.min(100, Math.max(0, percentage)));
+    }
+
+    function updateChapter() {
+      const chapterElements = document.querySelectorAll("[data-chapter]");
+
+      let visibleChapter = 1;
+
+      chapterElements.forEach((element) => {
+        const rect = element.getBoundingClientRect();
+
+        if (rect.top <= window.innerHeight * 0.35) {
+          visibleChapter = Number(element.dataset.chapter);
+        }
+      });
+
+      setCurrentChapter(visibleChapter);
+    }
+
+    function handleScroll() {
+      updateProgress();
+      updateChapter();
+    }
+
+    updateProgress();
+    updateChapter();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("resize", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
+  }, []);
+
   return (
     <main className="relative min-h-screen bg-[#0f0f10] text-zinc-100">
 
@@ -18,7 +76,10 @@ export default function ChapterReader({ children }) {
 
       {/* Reading progress */}
       <div className="sticky top-0 z-50 h-1 bg-zinc-800">
-        <div className="h-full w-1/3 bg-amber-400 transition-all duration-500" />
+        <div
+          className="h-full bg-amber-400 transition-all duration-200"
+          style={{ width: `${progress}%` }}
+        />
       </div>
 
       {/* Reading area */}
@@ -43,21 +104,27 @@ export default function ChapterReader({ children }) {
           </Link>
         </div>
 
+        {/* Reading status */}
+        <div className="sticky top-1 z-40 mt-6 flex justify-between border-y border-zinc-800/60 bg-[#0f0f10]/90 px-1 py-3 text-xs text-zinc-500 backdrop-blur">
+          <span className="truncate pr-4">
+            {bookTitle}
+          </span>
+
+          <span className="shrink-0 text-amber-400">
+            Chapter {currentChapter} of {chapterCount}
+          </span>
+        </div>
+
         {/* Chapter heading */}
         <header className="pb-12 pt-14 sm:pb-16 sm:pt-16">
 
           <p className="text-sm uppercase tracking-[0.35em] text-amber-400">
-            The Metal Within
+            {bookTitle}
           </p>
 
           <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">
-            Chapter One
+            Reading
           </h1>
-
-          <div className="mt-5 flex items-center gap-2 text-sm text-zinc-500">
-            <Clock className="h-4 w-4" />
-            <span>8 min read</span>
-          </div>
 
         </header>
 
@@ -82,55 +149,6 @@ export default function ChapterReader({ children }) {
         >
           {children}
         </article>
-
-        {/* End of sample */}
-        <section
-          className="
-            my-24
-            rounded-3xl
-            border
-            border-amber-500/20
-            bg-zinc-900/70
-            p-7
-            text-center
-            sm:p-10
-          "
-        >
-          <BookOpen className="mx-auto h-7 w-7 text-amber-400" />
-
-          <h2 className="mt-5 text-2xl font-bold sm:text-3xl">
-            End of Free Sample
-          </h2>
-
-          <p className="mx-auto mt-5 max-w-xl leading-8 text-zinc-400">
-            Thank you for reading the opening chapter of{" "}
-            <span className="font-semibold text-white">
-              The Metal Within
-            </span>
-            .
-            Imondo's journey is only beginning.
-          </p>
-
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-
-            <Link href="/buy/1">
-              <Button size="lg" className="w-full sm:w-auto">
-                Buy The Book
-              </Button>
-            </Link>
-
-            <Link href="/library">
-              <Button
-                variant="secondary"
-                size="lg"
-                className="w-full sm:w-auto"
-              >
-                Explore More Books
-              </Button>
-            </Link>
-
-          </div>
-        </section>
 
       </div>
 

@@ -112,7 +112,7 @@ export default async function ReadPage({ params, searchParams }) {
     : chapters.slice(0, 1);
 
   return (
-    <ChapterReader>
+    <ChapterReader bookTitle={book.title} chapterCount={chapters.length}>
       <header className="mb-12 border-b border-zinc-800 pb-8">
         <p className="text-sm uppercase tracking-[0.3em] text-amber-500">
           {book.title}
@@ -126,6 +126,7 @@ export default async function ReadPage({ params, searchParams }) {
       {chaptersToShow.map((chapter) => (
         <section
           key={chapter.id}
+          data-chapter={chapter.chapterNumber}
           className="mb-20"
         >
           <header className="mb-8 border-b border-zinc-800 pb-6">
