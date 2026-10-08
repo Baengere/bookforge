@@ -18,6 +18,8 @@ export async function POST(request) {
       return Response.json({
         purchased: purchase?.status === "completed",
         status: purchase?.status || "not_found",
+        email:purchase?.status === "completed"
+        ? purchase.email:null
       });
     }
 
