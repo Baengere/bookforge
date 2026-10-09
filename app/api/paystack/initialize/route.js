@@ -88,11 +88,11 @@ export async function POST(request) {
           callback_url:
             `https://bookforge-lilac.vercel.app/buy/${book.id}` +
             `?purchaseId=${purchase.id}`,
-          metadata: {
+          metadata: JSON.stringify({
             purchaseId: purchase.id,
             bookId: book.id,
             bookTitle: book.title,
-          },
+          }),
         }),
       }
     );
@@ -108,7 +108,7 @@ export async function POST(request) {
       console.error("PAYSTACK INITIALIZE ERROR:", result);
 
       return Response.json(
-        { error: "Could not start Paystack checkout." },
+        { error: result.message || result.data?.message || "Could not start paystack checkout"},
         { status: 502 }
       );
     }
