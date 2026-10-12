@@ -116,17 +116,6 @@ export default async function ReadPage({ params }) {
   return (
     <ChapterReader bookTitle={book.title} chapterCount={chapters.length}>
       <header className="mb-12 border-b border-zinc-800 pb-8">
-        <nav className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 pb-5">
-          <Link href="/my-books" className="text-sm font-medium text-amber-400 transition hover:text-amber-300">
-          My-books
-          </Link>
-          <Link
-            href="/library"
-            className="text-sm font-medium text-zinc-400 transition hover:text-white"
-            >
-            Explore Library →
-          </Link>
-        </nav>
         <p className="text-sm uppercase tracking-[0.3em] text-amber-500">
           {book.title}
         </p>

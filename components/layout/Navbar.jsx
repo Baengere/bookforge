@@ -30,6 +30,8 @@ export default function Navbar({isAuthenticated=false}) {
                         Library
                     </Link>
 
+                    <Link href="/my-books" className="text-zinc-300 transition hover:text-white">My Books</Link>
+
                     <Link
                         href="/about"
                         className="text-zinc-300 transition hover:text-white"
@@ -88,6 +90,10 @@ export default function Navbar({isAuthenticated=false}) {
                             className="rounded-lg px-4 py-3 text-zinc-300 transition hover:bg-zinc-900 hover:text-white"
                         >
                             Library
+                        </Link>
+
+                        <Link href="/my-books" onClick={() => setMenuOpen(false)} className="rounded-lg px-4 py-3 text-zinc-300 transition hover:bg-zinc-900 hover:text-white">
+                            My Books
                         </Link>
 
                         <Link
