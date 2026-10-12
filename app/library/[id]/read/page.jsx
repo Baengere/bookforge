@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import ChapterReader from "@/components/reader/ChapterReader";
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server";
 
 async function getBook(id) {
   return prisma.book.findUnique({
@@ -25,9 +26,10 @@ async function checkPurchase(bookId, email) {
   return Boolean(purchase);
 }
 
-export default async function ReadPage({ params, searchParams }) {
+export default async function ReadPage({ params }) {
   const { id } = await params;
-  const { email } = await searchParams;
+  const {getUser} = await getKindeServerSession();
+  const user = await getUser();
 
   // Make sure a valid book ID was provided.
   if (!id || Number.isNaN(Number(id))) {
@@ -78,7 +80,7 @@ export default async function ReadPage({ params, searchParams }) {
     );
   }
 
-  const readerEmail = email || null;
+  const readerEmail = user?.email?.trim().toLowerCase() || null;
 
   const purchased = readerEmail
     ? await checkPurchase(book.id, readerEmail)
@@ -114,6 +116,17 @@ export default async function ReadPage({ params, searchParams }) {
   return (
     <ChapterReader bookTitle={book.title} chapterCount={chapters.length}>
       <header className="mb-12 border-b border-zinc-800 pb-8">
+        <nav className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-zinc-800 pb-5">
+          <Link href="/my-books" className="text-sm font-medium text-amber-400 transition hover:text-amber-300">
+          My-books
+          </Link>
+          <Link
+            href="/library"
+            className="text-sm font-medium text-zinc-400 transition hover:text-white"
+            >
+            Explore Library →
+          </Link>
+        </nav>
         <p className="text-sm uppercase tracking-[0.3em] text-amber-500">
           {book.title}
         </p>

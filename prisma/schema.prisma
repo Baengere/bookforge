@@ -34,18 +34,20 @@ model Chapter {
   @@unique([bookId, chapterNumber])
 }
 
+
 model Purchase {
-  id            Int @id @default(autoincrement())
-  bookId        Int
-  email         String?
-  amount        Decimal @db.Decimal(10, 2)
-  status        String  @default("completed")
-  transactionId String?
-  createdAt     DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  bookId            Int
+  email             String?
+  amount            Decimal  @db.Decimal(10, 2)
+  status            String   @default("completed")
+  transactionId     String?
+  accessTokenHash   String?  @unique
+  accessTokenExpiry DateTime?
+  createdAt         DateTime @default(now())
 
   book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@index([bookId])
   @@index([email])
-
 }

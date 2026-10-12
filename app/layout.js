@@ -1,6 +1,6 @@
 
 import "./globals.css";
-
+import NavbarWithAuth from "@/components/layout/NavbarWithAuth";
 
 
 export const metadata = {
@@ -23,7 +23,9 @@ export default function RootLayout({ children }) {
       lang="en"
       className="h-full antialiased"
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <NavbarWithAuth />
+        {children}</body>
     </html>
   );
 }

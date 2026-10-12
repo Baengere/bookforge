@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Menu } from "@/lib/icons";
 import Logo from "@/components/shared/Logo";
 
-export default function Navbar() {
+export default function Navbar({isAuthenticated=false}) {
     const [menuOpen, setMenuOpen] = useState(false);
 
     return (
@@ -43,6 +43,16 @@ export default function Navbar() {
                     >
                         Publish
                     </Link>
+
+                    {isAuthenticated ? (
+                        <Link href="/api/auth/logout"
+                        className="text-zinc-300 transition hover:text-white">
+                            Sign out
+                        </Link>
+                    ):(
+                        <Link href="/api/auth/login"
+                        className="rounded-lg bg-amber-500 px-4 py-2 font-semibold text-black hover:bg-amber-400">Sign in</Link>
+                    )}
                 </nav>
 
                 {/* Mobile Menu Button */}
@@ -95,6 +105,17 @@ export default function Navbar() {
                         >
                             Publish
                         </Link>
+
+                        {isAuthenticated ? (
+                            <Link href="/api/auth/logout"
+                            className="rounded-lg px-4 py-3 text-zinc-300 hover:bg-zinc-900 hover:text-white"
+                            onClick={()=>setMenuOpen(false)}
+                            >Sign out</Link>
+                        ):(
+                            <Link href="/api/auth/login"
+                            onClick={()=>setMenuOpen(false)}
+                            className="rounded-lg px-4 py-3 text-zinc-300 hover:text-white">Sign in</Link>
+                        )}
 
                     </div>
                 </nav>
