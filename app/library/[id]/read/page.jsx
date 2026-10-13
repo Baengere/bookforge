@@ -30,6 +30,7 @@ export default async function ReadPage({ params }) {
   const { id } = await params;
   const {getUser} = await getKindeServerSession();
   const user = await getUser();
+  console.log("Kinde User:", user);
 
   // Make sure a valid book ID was provided.
   if (!id || Number.isNaN(Number(id))) {
