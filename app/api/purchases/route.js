@@ -1,6 +1,12 @@
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request) {
+  if(process.env.NODE_ENV === "production"){
+    return Response.json(
+      { error: "Test Purchases are disabled in production" },
+      {status: 404}
+    )
+  }
   try {
     const body = await request.json();
 

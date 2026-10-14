@@ -48,3 +48,6 @@ next-env.d.ts
 skills-lock.json
 .env*.local
 bookforge-data.sql
+
+# Generated Serwist service worker
+public/sw.js

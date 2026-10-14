@@ -1,82 +1,207 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, BookOpen } from "@/lib/icons";
 
 export default function ChapterReader({
   children,
+  bookId,
   bookTitle,
   chapterCount,
-}) {
+  }) {
   const [progress, setProgress] = useState(0);
   const [currentChapter, setCurrentChapter] = useState(1);
+  const progressReady = useRef(false)
+  const canSaveProgress = useRef(false)
 
+  
   useEffect(() => {
-    function updateProgress() {
-      const scrollTop = window.scrollY;
-      const documentHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
+    let cancelled = false;
 
-      if (documentHeight <= 0) {
-        setProgress(0);
+    async function loadReadingProgress() {
+      try {
+        const response = await fetch(
+          `/api/reading-progress?bookId=${bookId}`
+        );
+
+        if (!response.ok) return;
+
+        canSaveProgress.current = true;
+
+        const data = await response.json();
+        const saved = data.progress;
+
+        if (!saved || cancelled) return;
+
+        const chapter = document.querySelector(
+        `[data-chapter="${saved.chapterNumber}"]`
+        );
+
+        // Restore only if this chapter is actually available to read.
+        if (!chapter) return;
+
+        const ratio = Math.min(
+          1,
+          Math.max(0, saved.position / 10000)
+        );
+
+        const scrollableHeight = Math.max(
+          0,
+          chapter.offsetHeight - window.innerHeight
+        );
+
+        const targetTop =
+          window.scrollY +
+          chapter.getBoundingClientRect().top +
+          ratio * scrollableHeight;
+
+        window.scrollTo({
+          top: targetTop,
+          behavior: "auto",
+        });
+
+        setCurrentChapter(saved.chapterNumber);
+      } catch (error) {
+        console.error("Could not load reading progress:", error);
+      } finally {
+        if (!cancelled) {
+          progressReady.current = true;
+        }
+      }
+    }
+
+    loadReadingProgress();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId]);
+
+
+  
+    useEffect(() => {
+      let saveTimer;
+      let visibleChapterNumber = 1;
+
+      function updateProgress() {
+        const scrollTop = window.scrollY;
+        const documentHeight =
+          document.documentElement.scrollHeight - window.innerHeight;
+
+        if (documentHeight <= 0) {
+          setProgress(0);
+          return;
+        }
+
+        const percentage = (scrollTop / documentHeight) * 100;
+
+        setProgress(Math.min(100, Math.max(0, percentage)));
+      }
+
+      function updateChapter() {
+        const chapterElements = document.querySelectorAll("[data-chapter]");
+
+        let visibleChapter = 1;
+
+        chapterElements.forEach((element) => {
+          const rect = element.getBoundingClientRect();
+
+          if (rect.top <= window.innerHeight * 0.35) {
+            visibleChapter = Number(element.dataset.chapter);
+          }
+        });
+
+        visibleChapterNumber = visibleChapter;
+        setCurrentChapter(visibleChapter);
+      }
+
+      async function saveReadingProgress() {
+        // Wait until the saved bookmark has finished loading.
+        if (!progressReady.current || !canSaveProgress.current) {
+          return;
+        }
+
+        const chapter = document.querySelector(
+          `[data-chapter="${visibleChapterNumber}"]`
+        );
+
+        if (!chapter) return;
+
+        const scrollableHeight = Math.max(
+          1,
+          chapter.offsetHeight - window.innerHeight
+        );
+
+        const distanceScrolled = -chapter.getBoundingClientRect().top;
+
+        const ratio = Math.min(
+          1,
+          Math.max(0, distanceScrolled / scrollableHeight)
+        );
+
+        const position = Math.round(ratio * 10000);
+
+        try {
+          const response = await fetch("/api/reading-progress", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+            bookId,
+            chapterNumber: visibleChapterNumber,
+            position,
+            }),
+          });
+
+          if (!response.ok) {
+            console.error("Could not save reading progress.");
+          }
+        } catch (error) {
+          console.error("Could not save reading progress:", error);
+        }
+      }
+
+      function handleScroll() {
+        updateProgress();
+        updateChapter();
+
+        // Reset the timer whenever scrolling continues.
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveReadingProgress, 1200);
+      }
+
+      updateProgress();
+      updateChapter();
+
+      window.addEventListener("scroll", handleScroll, { passive: true });
+      window.addEventListener("resize", handleScroll);
+
+      return () => {
+        clearTimeout(saveTimer);
+        window.removeEventListener("scroll", handleScroll);
+        window.removeEventListener("resize", handleScroll);
+      };
+    }, [bookId]);
+
+
+    function goToChapter(chapterNumber) {
+      const chapter = document.querySelector(
+        `[data-chapter="${chapterNumber}"]`
+      );
+
+      if (!chapter) {
         return;
       }
 
-      const percentage = (scrollTop / documentHeight) * 100;
-
-      setProgress(Math.min(100, Math.max(0, percentage)));
-    }
-
-    function updateChapter() {
-      const chapterElements = document.querySelectorAll("[data-chapter]");
-
-      let visibleChapter = 1;
-
-      chapterElements.forEach((element) => {
-        const rect = element.getBoundingClientRect();
-
-        if (rect.top <= window.innerHeight * 0.35) {
-          visibleChapter = Number(element.dataset.chapter);
-        }
+      chapter.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
       });
-
-      setCurrentChapter(visibleChapter);
     }
 
-    function handleScroll() {
-      updateProgress();
-      updateChapter();
-    }
-
-    updateProgress();
-    updateChapter();
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
-    };
-  }, []);
-
-  function goToChapter(chapterNumber) {
-    const chapter = document.querySelector(
-      `[data-chapter="${chapterNumber}"]`
-    );
-
-    if (!chapter) {
-      return;
-    }
-
-    chapter.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
-
-  return (
+    return (
     <main className="relative min-h-screen bg-[#0f0f10] text-zinc-100">
 
       {/* Soft reading-room glow */}

@@ -30,7 +30,6 @@ export default async function ReadPage({ params }) {
   const { id } = await params;
   const {getUser} = await getKindeServerSession();
   const user = await getUser();
-  console.log("Kinde User:", user);
 
   // Make sure a valid book ID was provided.
   if (!id || Number.isNaN(Number(id))) {
@@ -115,7 +114,7 @@ export default async function ReadPage({ params }) {
     : chapters.slice(0, 1);
 
   return (
-    <ChapterReader bookTitle={book.title} chapterCount={chapters.length}>
+    <ChapterReader bookId={book.id} bookTitle={book.title} chapterCount={chapters.length}>
       <header className="mb-12 border-b border-zinc-800 pb-8">
         <p className="text-sm uppercase tracking-[0.3em] text-amber-500">
           {book.title}

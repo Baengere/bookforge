@@ -1,14 +1,24 @@
 
 import { prisma } from "@/lib/prisma";
+import {getKindeServerSession} from "@kinde-oss/kinde-auth-nextjs/server"; 
 
 export async function POST(request) {
   let purchaseId;
 
   try {
-    const { bookId, email } = await request.json();
+    const {getUser} = await getKindeServerSession()
+    const user = await getUser()
+
+    if(!user?.email){
+      return Response.json(
+        {error: "Please sign in before purchasing a book."},
+        {status:401}
+      )
+    }
+    const {bookId} = await request.json();
+    const customerEmail = user.email.trim().toLowerCase();
 
     const id = Number(bookId);
-    const customerEmail = String(email || "").trim();
 
     if (!Number.isInteger(id) || id < 1) {
       return Response.json(

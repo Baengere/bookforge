@@ -357,7 +357,7 @@ export default function BuyPage() {
             </div>
 
             {error && (
-              <p className="mt-4 text-sm text-red-400">
+              <p role="alert" className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-base font-semibold leading-relaxed text-red-400">
                 {error}
               </p>
             )}

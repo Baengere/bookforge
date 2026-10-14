@@ -33,7 +33,7 @@ export async function POST(request) {
     const purchase = await prisma.purchase.findFirst({
       where: {
         bookId,
-        email,
+        email:{equals:email, mode:"insensitive"},
         status: "completed",
       },
     });
@@ -45,10 +45,7 @@ export async function POST(request) {
     console.error("PURCHASE CHECK ERROR:", error);
 
     return Response.json(
-      {
-        purchased: false,
-        error: "Could not check purchase",
-      },
+      {error: "Could not check purchase"},
       { status: 500 }
     );
   }

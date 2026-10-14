@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "concurrently -p none 'serwist build --watch' 'next dev'",
+    "build": "next build && serwist build",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
@@ -30,10 +30,15 @@
     "uploadthing": "^7.7.4"
   },
   "devDependencies": {
+    "@serwist/cli": "^9.5.13",
+    "@serwist/next": "^9.5.13",
     "@tailwindcss/postcss": "^4",
+    "concurrently": "^10.0.6",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "prisma": "^7.9.1",
+    "serwist": "^9.5.13",
     "tailwindcss": "^4"
   },
   "packageManager": "pnpm@10.27.0"

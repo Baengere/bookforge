@@ -50,6 +50,15 @@ export default async function MyBooksPage() {
     ).values(),
   ];
 
+  const readingProgress = await prisma.readingProgress.findMany({
+    where: {
+      userId: user.id,
+      bookId:{in: books.map((book)=> book.id)}
+    }
+  }
+  )
+  const progressByBook = new Map(readingProgress.map((item)=>[item.bookId, item]))
+
   return (
     <main className="min-h-screen bg-[#0B0B0B] px-6 py-16 text-white">
       <div className="mx-auto max-w-7xl">
@@ -94,12 +103,48 @@ export default async function MyBooksPage() {
                 )}
 
                 <div className="p-6">
+                  
                   <h2 className="text-xl font-bold">{book.title}</h2>
+
                   <p className="mt-2 text-zinc-400">
                     By {book.author}
                   </p>
 
-                  <Link
+                  {(() => {
+                    const saved = progressByBook.get(book.id);
+
+                    if (!saved) {
+                      return (
+                      <p className="mt-4 text-sm text-zinc-500">
+                        Ready when you are
+                      </p>
+                  );
+                    }
+
+              return (
+                <div className="mt-4">
+                  <p className="text-sm text-amber-400">
+                    Last reading position: Chapter {saved.chapterNumber}
+                  </p>
+
+                <div
+                  className="mt-2 h-1.5 overflow-hidden rounded-full bg-zinc-800"
+                  role="progressbar"
+                  aria-label={`Reading position in ${book.title}`}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(saved.position / 100)}
+                  >
+                  <div
+                    className="h-full rounded-full bg-amber-400"
+                    style={{ width: `${saved.position / 100}%` }}
+                    />
+                  </div>
+            </div>
+            );
+            })()}
+            
+                <Link
                     href={`/library/${book.id}/read`}
                     className="mt-6 inline-block rounded-lg bg-amber-500 px-5 py-3 font-semibold text-black hover:bg-amber-400"
                   >
