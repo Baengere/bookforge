@@ -1,4 +1,3 @@
-import { SerwistProvider } from "@serwist/next/react";
 
 import "./globals.css";
 import NavbarWithAuth from "@/components/layout/NavbarWithAuth";
@@ -25,10 +24,8 @@ export default function RootLayout({ children }) {
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
-        <SerwistProvider swUrl="/sw.js">
           <NavbarWithAuth />
           {children}
-        </SerwistProvider>
       </body>
     </html>
   );

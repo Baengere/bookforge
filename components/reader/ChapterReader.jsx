@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, BookOpen } from "@/lib/icons";
+import { saveOfflineBook, getOfflineBook } from "@/lib/offline-books";  
+
 
 export default function ChapterReader({
   children,
@@ -12,9 +14,66 @@ export default function ChapterReader({
   }) {
   const [progress, setProgress] = useState(0);
   const [currentChapter, setCurrentChapter] = useState(1);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [offlineMessage, setOfflineMessage] = useState("");
+  const [isOffline, setIsOffline] = useState(false)
+  const [offlineBook, setOfflineBook] = useState(null) 
   const progressReady = useRef(false)
   const canSaveProgress = useRef(false)
 
+  async function handleOfflineDownload() {
+    setIsDownloading(true);
+    setOfflineMessage("");
+
+    try {
+      const response = await fetch(`/api/offline-books/${bookId}`);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not download this book.");
+      }
+
+      await saveOfflineBook(data);
+
+      setOfflineMessage("Book saved! You can now prepare to read offline.");
+    } catch (error) {
+      console.error("Offline download failed:", error);
+
+      setOfflineMessage(
+        error.message || "Download failed. Please try again."
+      );
+    } finally {
+      setIsDownloading(false);
+    }
+  }
+
+  useEffect(()=>{
+    let cancelled = false;
+
+    async function checkConnection(){
+      const offline = !navigator.onLine;
+      setIsOffline(offline);
+
+      if(!offline){
+        setOfflineBook(null);
+        return
+      }
+      try{
+        const savedBook = await getOfflineBook(Number(bookId));
+
+        if(!cancelled){
+          setOfflineBook(savedBook || null);
+        }
+      }catch(error){
+        console.error("Could not load offline book:", error)
+      }
+    }
+    checkConnection()
+    window.addEventListener("online", checkConnection)
+    window.addEventListener("offline", checkConnection)
+
+  },[bookId])
   
   useEffect(() => {
     let cancelled = false;
@@ -225,6 +284,22 @@ export default function ChapterReader({
       {/* Reading area */}
       <div className="relative mx-auto max-w-3xl px-5 sm:px-6">
 
+        {/* Offline download */}
+
+        <div className="pt-6">
+          <button
+            type="button"
+            onClick={handleOfflineDownload}
+            disabled={isDownloading}
+            className="rounded-xl border border-amber-500/50
+            px-4 py-3 text-sm font-medium text-amber-400 transition
+            hover:bg-amber-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+          >{isDownloading ? "Saving book":"Download for offline reading"}</button>
+          {offlineMessage && (<p role="status" className="mt-3 text-sm text-zinc-400">
+            {offlineMessage}
+          </p>)}
+        </div>
+
         {/* Back */}
         <div className="pt-8 sm:pt-10">
           <Link
@@ -306,7 +381,52 @@ export default function ChapterReader({
             prose-strong:text-zinc-100
           "
         >
-          {children}
+          
+          {isOffline ? (
+            offlineBook ? (
+            <>
+              <header className="mb-12 border-b border-zinc-800 pb-8">
+                <p className="text-sm uppercase tracking-[0.3em] text-amber-500">
+                  {offlineBook.title}
+                </p>
+
+                <p className="mt-4 text-lg text-zinc-500">
+                  By {offlineBook.author}
+                </p>
+              </header>
+
+            {offlineBook.chapters.map((chapter) => (
+              <section
+                key={chapter.id}
+                data-chapter={chapter.chapterNumber}
+                className="mb-20"
+              >
+                <header className="mb-8 border-b border-zinc-800 pb-6">
+                  <p className="text-sm uppercase tracking-[0.2em] text-amber-500">
+                      Chapter {chapter.chapterNumber}
+                  </p>
+
+                  <h2 className="mt-3 text-3xl font-bold">
+                    {chapter.title}
+                  </h2>
+                </header>
+
+                <div className="whitespace-pre-wrap leading-8 text-zinc-300">
+                  {chapter.content}
+                </div>
+              </section>
+            ))}
+          </>
+      ) : (
+        <p className="text-zinc-400">
+          This book is not available offline on this device.
+        Reconnect to the internet and download it first.
+          </p>
+        ) 
+        ) : (
+          children
+          )}
+
         </article>
 
         {/* Chapter navigation */}

@@ -21,6 +21,9 @@ async function checkPurchase(bookId, email) {
       email,
       status: "completed",
     },
+    select:{
+      id: true
+    }
   });
 
   return Boolean(purchase);

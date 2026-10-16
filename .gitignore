@@ -51,3 +51,6 @@ bookforge-data.sql
 
 # Generated Serwist service worker
 public/sw.js
+/public/sw.js
+/public/workbox-*.js
+/public/fallback-*.js
