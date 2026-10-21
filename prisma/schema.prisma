@@ -67,3 +67,18 @@ model ReadingProgress {
   @@unique([userId, bookId])
   @@index([userId])
 }
+
+
+model SupportRequest {
+  id        Int      @id @default(autoincrement())
+  email     String
+  category  String
+  message   String   @db.Text
+  bookTitle String?
+  status    String   @default("open")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
+}

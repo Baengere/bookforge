@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Menu } from "@/lib/icons";
 import Logo from "@/components/shared/Logo";
 
-export default function Navbar({isAuthenticated=false}) {
+export default function Navbar({isAuthenticated=false, isAdmin=false}) {
     const [menuOpen, setMenuOpen] = useState(false);
 
     return (
@@ -45,6 +45,10 @@ export default function Navbar({isAuthenticated=false}) {
                     >
                         Publish
                     </Link>
+
+                    {isAdmin && (
+                        <Link href="/admin/support" className='text-amber-400 transition hover:text-amber-300'>Support</Link>
+                    )}
 
                     {isAuthenticated ? (
                         <Link href="/api/auth/logout"
@@ -92,6 +96,7 @@ export default function Navbar({isAuthenticated=false}) {
                             Library
                         </Link>
 
+
                         <Link href="/my-books" onClick={() => setMenuOpen(false)} className="rounded-lg px-4 py-3 text-zinc-300 transition hover:bg-zinc-900 hover:text-white">
                             My Books
                         </Link>
@@ -111,6 +116,10 @@ export default function Navbar({isAuthenticated=false}) {
                         >
                             Publish
                         </Link>
+
+                        {isAdmin && (
+                            <Link href="/admin/support" onClick={()=>setMenuOpen(false)} className="rounded-lg px-4 py-3 text-amber-400 transition hover:bg-zinc-900 hover:text-amber-300">Support</Link>
+                        )}
 
                         {isAuthenticated ? (
                             <Link href="/api/auth/logout"
