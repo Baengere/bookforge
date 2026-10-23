@@ -2,7 +2,6 @@
 import Hero from "@/components/sections/Hero";
 import FeaturedBook from "@/components/sections/FeaturedBook";
 import About from "@/components/sections/About";
-import Footer from "@/components/layout/Footer";
 import NewsletterSignup from "@/components/sections/NewsletterSignup";
 
 export default function Home() {
@@ -12,7 +11,6 @@ export default function Home() {
       <FeaturedBook />
       <About />
       <NewsletterSignup />
-      <Footer />
     </main>
   );
 }

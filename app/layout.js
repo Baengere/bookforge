@@ -1,7 +1,7 @@
 
 import "./globals.css";
 import NavbarWithAuth from "@/components/layout/NavbarWithAuth";
-
+import Footer from "@/components/layout/Footer";
 
 export const metadata = {
   title: "BookForge",
@@ -26,6 +26,7 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col">
           <NavbarWithAuth />
           {children}
+          <Footer/>
       </body>
     </html>
   );
