@@ -32,3 +32,17 @@ export function FacebookIcon({ className = "h-5 w-5" }) {
     </svg>
   );
 }
+
+export function TikTokIcon({ className = "" }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.1V2h-3.4v13.67a2.9 2.9 0 0 1-2.9 2.9 2.9 2.9 0 1 1 2.9-2.9V12.2a6.3 6.3 0 1 0 3.4 5.6V10.8a8.16 8.16 0 0 0 4.77 1.53V8.94a4.85 4.85 0 0 1-1-.1Z" />
+    </svg>
+  );
+}
