@@ -22,7 +22,7 @@ async function checkPurchase(bookId, email) {
       status: "completed",
     },
     select:{
-      id
+      id:true
     }
   });
 
