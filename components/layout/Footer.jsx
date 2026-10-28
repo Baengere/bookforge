@@ -1,7 +1,7 @@
 
 import Link from "next/link";
 import { BookOpen, ArrowUp } from "@/lib/icons";
-import { InstagramIcon, FacebookIcon, TikTokIcon } from "./SocialIcons";
+import { InstagramIcon, FacebookIcon, TikTokIcon, XIcon } from "./SocialIcons";
 
 export default function Footer() {
   return (
@@ -78,6 +78,16 @@ export default function Footer() {
                 aria-label="Follow BookForge on TikTok"
                 className="rounded-lg border border-zinc-700 bg-zinc-800/50 p-3 text-zinc-100 transition hover:border-amber-400 hover:bg-zinc-700">
                   <TikTokIcon className="h-5 w-5" />
+              </a>
+
+              <a
+                href="https://x.com/BookForgeReads"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Follow BookForge on X"
+                className="rounded-lg border border-zinc-700 bg-zinc-900 p-3 text-zinc-100 transition hover:border-zinc-400 hover:bg-zinc-800" 
+              >
+                <XIcon className="h-5 w-5"/>
               </a>
             </div>
           </div>
