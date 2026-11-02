@@ -2,6 +2,8 @@
 import "./globals.css";
 import NavbarWithAuth from "@/components/layout/NavbarWithAuth";
 import Footer from "@/components/layout/Footer";
+import { Analytics } from "@vercel/analytics/next";
+
 
 export const metadata = {
   title: "BookForge",
@@ -27,6 +29,7 @@ export default function RootLayout({ children }) {
           <NavbarWithAuth />
           {children}
           <Footer/>
+          <Analytics />
       </body>
     </html>
   );
