@@ -34,7 +34,18 @@ export async function POST(request) {
       );
     }
 
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    // const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const paystackMode = process.env.PAYSTACK_MODE
+
+    if(paystackMode !== "test" && paystackMode !== "live"){
+      return Response.json(
+        {error:"Invalid paystack mode configuration"},
+        {status:500}
+      )
+    }
+
+    const secretKey = paystackMode === "test"? process.env.PAYSTACK_TEST_SECRET_KEY :
+      process.env.PAYSTACK_SECRET_KEY
 
     if (!secretKey) {
       return Response.json(
@@ -54,6 +65,13 @@ export async function POST(request) {
       );
     }
 
+    if(book.isArchived){
+      return Response.json(
+        {error:"This book is nolonger available for Purchase!"},
+        {status:410}
+      )
+    }
+
     const amount = Math.round(Number(book.price) * 100);
 
     if (!Number.isFinite(amount) || amount < 300) {
@@ -66,8 +84,10 @@ export async function POST(request) {
     const purchase = await prisma.purchase.create({
       data: {
         bookId: book.id,
+        authorId: book.ownerId,
         email: customerEmail,
         amount: book.price,
+        commissionRate: 15,
         status: "pending",
       },
     });
@@ -80,6 +100,17 @@ export async function POST(request) {
       where: { id: purchase.id },
       data: { transactionId: reference },
     });
+
+    const appUrl = process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : process.env.APP_URL;
+
+    if (!appUrl) {
+      return Response.json(
+        { error: "Application URL is not configured." },
+        { status: 500 }
+      );
+      }
 
     const response = await fetch(
       "https://api.paystack.co/transaction/initialize",
@@ -96,9 +127,8 @@ export async function POST(request) {
           reference,
           channels: ["mobile_money"],
           callback_url:
-            `https://bookforge-lilac.vercel.app/buy/${book.id}` +
-            `?purchaseId=${purchase.id}`,
-          metadata: JSON.stringify({
+            `${appUrl}/buy/${book.id}?purchasedId=${purchase.id}`,
+            metadata: JSON.stringify({
             purchaseId: purchase.id,
             bookId: book.id,
             bookTitle: book.title,
@@ -106,6 +136,8 @@ export async function POST(request) {
         }),
       }
     );
+
+
 
     const result = await response.json();
 

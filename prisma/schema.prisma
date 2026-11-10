@@ -14,11 +14,15 @@ model Book {
   description String?
   price       Decimal   @db.Decimal(10, 2)
   coverImage  String?
+  ownerId     String?
+  isArchived  Boolean   @default(false)
   createdAt   DateTime  @default(now())
 
   chapters    Chapter[]
   purchases   Purchase[]
   readingProgress ReadingProgress[]
+
+  @@index([ownerId])
 }
 
 model Chapter {
@@ -43,6 +47,12 @@ model Purchase {
   amount            Decimal  @db.Decimal(10, 2)
   status            String   @default("completed")
   transactionId     String?
+  authorId           String?
+  processingFee      Decimal? @db.Decimal(10, 2)
+  netAmount          Decimal? @db.Decimal(10, 2)
+  platformCommission Decimal? @db.Decimal(10, 2)
+  authorEarnings     Decimal? @db.Decimal(10, 2)
+  commissionRate     Int?
   accessTokenHash   String?  @unique
   accessTokenExpiry DateTime?
   createdAt         DateTime @default(now())
@@ -51,6 +61,7 @@ model Purchase {
 
   @@index([bookId])
   @@index([email])
+  @@index([authorId])
 }
 
 

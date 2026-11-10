@@ -1,11 +1,29 @@
+
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request) {
   try {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    const signature = request.headers.get("x-paystack-signature");
+    // const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    // const signature = request.headers.get("x-paystack-signature");
 
+    const paystackMode = process.env.PAYSTACK_MODE;
+
+    if (paystackMode !== "test" && paystackMode !== "live") {
+      return Response.json(
+        { error: "Invalid Paystack mode configuration." },
+        { status: 500 }
+      );
+    }
+
+  const secretKey =
+    paystackMode === "test"
+    ? process.env.PAYSTACK_TEST_SECRET_KEY
+    : process.env.PAYSTACK_SECRET_KEY;
+
+  const signature = request.headers.get("x-paystack-signature");
+
+    // 
     if (!secretKey || !signature) {
       return Response.json(
         { error: "Missing configuration or signature." },
@@ -13,7 +31,7 @@ export async function POST(request) {
       );
     }
 
-    // Read the raw body because Paystack signs the exact payload.
+    // Verify Paystack's signature using the exact raw request body.
     const rawBody = await request.text();
 
     const expectedSignature = createHmac("sha512", secretKey)
@@ -35,7 +53,7 @@ export async function POST(request) {
 
     const event = JSON.parse(rawBody);
 
-    // We only care about successful payments.
+    // Only process successful payments.
     if (event.event !== "charge.success") {
       return Response.json({ received: true });
     }
@@ -46,18 +64,22 @@ export async function POST(request) {
       return Response.json({ received: true });
     }
 
-    // Find the BookForge purchase created when checkout started.
+    // Find the purchase and its book owner's ID.
     const purchase = await prisma.purchase.findFirst({
       where: {
         transactionId: reference,
       },
+      include: {
+        book: {
+          select: {
+            ownerId: true,
+          },
+        },
+      },
     });
 
     if (!purchase) {
-      console.error(
-        "PAYSTACK WEBHOOK: Purchase not found:",
-        reference
-      );
+      console.error("PAYSTACK WEBHOOK: Purchase not found:", reference);
 
       return Response.json(
         { error: "Purchase not found." },
@@ -65,10 +87,7 @@ export async function POST(request) {
       );
     }
 
-    /*
-     * Ask Paystack directly whether this transaction
-     * is actually successful.
-     */
+    // Verify the transaction directly with Paystack.
     const verifyResponse = await fetch(
       `https://api.paystack.co/transaction/verify/${encodeURIComponent(
         reference
@@ -88,10 +107,7 @@ export async function POST(request) {
       !verifyResult.status ||
       !verifyResult.data
     ) {
-      console.error(
-        "PAYSTACK VERIFY ERROR:",
-        verifyResult
-      );
+      console.error("PAYSTACK VERIFY ERROR:", verifyResult);
 
       return Response.json(
         { error: "Could not verify transaction." },
@@ -101,34 +117,25 @@ export async function POST(request) {
 
     const transaction = verifyResult.data;
 
-    /*
-     * These checks are the real gate.
-     *
-     * BookForge only unlocks the book if Paystack
-     * confirms every important part of the transaction.
-     */
-    const expectedAmount =
-      Math.round(Number(purchase.amount) * 100);
+    // Confirm that the transaction matches the expected purchase.
+    const expectedAmount = Math.round(Number(purchase.amount) * 100);
 
     if (
       transaction.status !== "success" ||
       transaction.reference !== reference ||
       transaction.currency !== "KES" ||
       Number(transaction.amount) !== expectedAmount ||
-      transaction.domain !== "live"
+      transaction.domain !== paystackMode
     ) {
-      console.error(
-        "PAYSTACK TRANSACTION VERIFICATION FAILED:",
-        {
-          purchaseId: purchase.id,
-          reference,
-          transactionStatus: transaction.status,
-          transactionAmount: transaction.amount,
-          transactionCurrency: transaction.currency,
-          transactionDomain: transaction.domain,
-          expectedAmount,
-        }
-      );
+      console.error("PAYSTACK TRANSACTION VERIFICATION FAILED:", {
+        purchaseId: purchase.id,
+        reference,
+        transactionStatus: transaction.status,
+        transactionAmount: transaction.amount,
+        transactionCurrency: transaction.currency,
+        transactionDomain: transaction.domain,
+        expectedAmount,
+      });
 
       return Response.json(
         { error: "Transaction verification failed." },
@@ -136,39 +143,105 @@ export async function POST(request) {
       );
     }
 
-    /*
-     * Prevent duplicate fulfillment.
-     *
-     * If Paystack sends the same webhook again,
-     * we do not create another purchase or perform
-     * another fulfillment.
-     */
+    // Do not process a purchase that is already completed.
     if (purchase.status === "completed") {
       return Response.json({ received: true });
     }
 
-    await prisma.purchase.update({
+    // Identify the author.
+    const authorId = purchase.authorId ?? purchase.book.ownerId;
+
+    if (!authorId) {
+      console.error("PURCHASE HAS NO ASSIGNED AUTHOR:", purchase.id);
+
+      return Response.json(
+        { error: "Purchase has no assigned author." },
+        { status: 500 }
+      );
+    }
+
+    // Paystack returns fees in the currency's smallest unit.
+    const processingFeeCents = Number(transaction.fees);
+
+    if (
+      transaction.fees === null ||
+      transaction.fees === undefined ||
+      !Number.isSafeInteger(processingFeeCents) ||
+      processingFeeCents < 0 ||
+      processingFeeCents > expectedAmount
+    ) {
+      console.error("INVALID PAYSTACK PROCESSING FEE:", {
+        purchaseId: purchase.id,
+        fees: transaction.fees,
+      });
+
+      return Response.json(
+        { error: "Could not determine the processing fee." },
+        { status: 502 }
+      );
+    }
+
+    // Use the commission rate saved when checkout was initialized.
+    const commissionRate = purchase.commissionRate ?? 15;
+
+    if (
+      !Number.isInteger(commissionRate) ||
+      commissionRate < 0 ||
+      commissionRate > 100
+    ) {
+      return Response.json(
+        { error: "Invalid commission rate." },
+        { status: 500 }
+      );
+    }
+
+    // Calculate the distribution in cents to avoid floating-point errors.
+    const netAmountCents = expectedAmount - processingFeeCents;
+
+    const platformCommissionCents = Math.round(
+      netAmountCents * commissionRate / 100
+    );
+
+    const authorEarningsCents =
+      netAmountCents - platformCommissionCents;
+
+    // Convert cents to KES.
+    const toKES = (cents) => (cents / 100).toFixed(2);
+
+    // Complete the purchase only if it is still pending.
+    // This protects against simultaneous duplicate webhooks.
+    const updated = await prisma.purchase.updateMany({
       where: {
         id: purchase.id,
+        status: "pending",
       },
       data: {
         status: "completed",
+        authorId,
+        commissionRate,
+        processingFee: toKES(processingFeeCents),
+        netAmount: toKES(netAmountCents),
+        platformCommission: toKES(platformCommissionCents),
+        authorEarnings: toKES(authorEarningsCents),
       },
     });
 
-    console.log(
-      "PAYSTACK PAYMENT COMPLETED:",
-      purchase.id
-    );
+    if (updated.count === 0) {
+      return Response.json({ received: true });
+    }
 
-    return Response.json({
-      received: true,
+    console.log("PAYSTACK PAYMENT COMPLETED:", {
+      purchaseId: purchase.id,
+      grossAmount: toKES(expectedAmount),
+      processingFee: toKES(processingFeeCents),
+      netAmount: toKES(netAmountCents),
+      platformCommission: toKES(platformCommissionCents),
+      authorEarnings: toKES(authorEarningsCents),
     });
+
+    return Response.json({ received: true });
   } catch (error) {
-    console.error(
-      "PAYSTACK WEBHOOK ERROR:",
-      error
-    );
+    console.error("PAYSTACK WEBHOOK ERROR:", error);
 
     return Response.json(
       { error: "Could not process webhook." },
