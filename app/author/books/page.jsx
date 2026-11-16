@@ -2,8 +2,10 @@
 import { prisma } from "@/lib/prisma";
 import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 import BookActions from "./BookActions";
-
 import Link from "next/link";
+
+const formatKES = (cents) =>
+  `KES ${(cents / 100).toFixed(2)}`;
 
 export default async function AuthorBooksPage() {
   const { getUser } = getKindeServerSession();
@@ -31,6 +33,30 @@ export default async function AuthorBooksPage() {
     },
   });
 
+  // Retrieve this author's completed sales and payout allocations.
+  const purchases = await prisma.purchase.findMany({
+    where: {
+      authorId: user.id,
+      status: "completed",
+      authorEarnings: {
+        not: null,
+      },
+    },
+    select: {
+      authorEarnings: true,
+      payoutItem: {
+        select: {
+          amount: true,
+          payout: {
+            select: {
+              status: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
   const publishedCount = books.filter(
     (book) => !book.isArchived
   ).length;
@@ -38,6 +64,45 @@ export default async function AuthorBooksPage() {
   const archivedCount = books.filter(
     (book) => book.isArchived
   ).length;
+
+  // Convert amounts to cents to avoid floating-point rounding errors.
+  const totalEarnings = purchases.reduce(
+    (total, purchase) =>
+      total + Math.round(Number(purchase.authorEarnings) * 100),
+    0
+  );
+
+  const paidEarnings = purchases.reduce(
+    (total, purchase) => {
+      const item = purchase.payoutItem;
+
+      if (item?.payout.status === "PAID") {
+        return total + Math.round(Number(item.amount) * 100);
+      }
+
+      return total;
+    },
+    0
+  );
+
+  const reservedEarnings = purchases.reduce(
+    (total, purchase) => {
+      const item = purchase.payoutItem;
+
+      if (
+        item?.payout.status === "PENDING" ||
+        item?.payout.status === "PROCESSING"
+      ) {
+        return total + Math.round(Number(item.amount) * 100);
+      }
+
+      return total;
+    },
+    0
+  );
+
+  const availableEarnings =
+    totalEarnings - paidEarnings - reservedEarnings;
 
   return (
     <main className="min-h-screen bg-[#0B0B0B] text-white px-4 py-10 sm:px-6 lg:px-10">
@@ -69,6 +134,7 @@ export default async function AuthorBooksPage() {
           </div>
         </section>
 
+        {/* Book statistics */}
         <section className="mt-8 grid grid-cols-2 gap-4 sm:max-w-md">
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
             <p className="text-3xl font-bold">{publishedCount}</p>
@@ -85,6 +151,56 @@ export default async function AuthorBooksPage() {
           </div>
         </section>
 
+        {/* Author earnings */}
+        <section className="mt-10">
+          <div className="mb-5">
+            <h2 className="text-2xl font-bold sm:text-3xl">
+              Your earnings
+            </h2>
+            <p className="mt-2 text-sm text-zinc-500">
+              Track your book sales and payments.
+            </p>
+            <Link href="/author/payout" className="mt-3 inline-flex text-sm font-semibold text-amber-400 hover:text-amber-300">Manage Payout Details</Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+              <p className="text-sm text-zinc-400">
+                Total earned
+              </p>
+              <p className="mt-3 text-2xl font-bold text-white">
+                {formatKES(totalEarnings)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+              <p className="text-sm text-zinc-400">
+                Already paid
+              </p>
+              <p className="mt-3 text-2xl font-bold text-emerald-400">
+                {formatKES(paidEarnings)}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-5">
+              <p className="text-sm text-zinc-400">
+                Available earnings
+              </p>
+              <p className="mt-3 text-2xl font-bold text-amber-400">
+                {formatKES(availableEarnings)}
+              </p>
+              {reservedEarnings > 0 && (
+                <p className="mt-2 text-xs text-zinc-500">
+                  {formatKES(reservedEarnings)} reserved for pending payouts
+                </p>
+              )}
+            </div>
+
+          </div>
+        </section>
+
+        {/* Books */}
         <section className="mt-12">
           <div className="mb-6">
             <h2 className="text-2xl font-bold sm:text-3xl">
@@ -158,13 +274,13 @@ export default async function AuthorBooksPage() {
                       </span>
                     </div>
                   </div>
-                  
+
                   <BookActions
                     book={{
                       id: book.id,
                       title: book.title,
                       description: book.description,
-                      price: Number(book.price)
+                      price: Number(book.price),
                     }}
                   />
                 </article>

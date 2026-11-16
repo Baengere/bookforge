@@ -14,20 +14,25 @@ async function getBook(id) {
   });
 }
 
+
 async function checkPurchase(bookId, email) {
   const purchase = await prisma.purchase.findFirst({
     where: {
       bookId,
-      email,
+      email: {
+        equals: email,
+        mode: "insensitive",
+      },
       status: "completed",
     },
-    select:{
-      id:true
-    }
+    select: {
+      id: true,
+    },
   });
 
   return Boolean(purchase);
 }
+
 
 export default async function ReadPage({ params }) {
   const { id } = await params;
@@ -117,7 +122,7 @@ export default async function ReadPage({ params }) {
     : chapters.slice(0, 1);
 
   return (
-    <ChapterReader bookId={book.id} bookTitle={book.title} chapterCount={chapters.length}>
+    <ChapterReader bookId={book.id} bookTitle={book.title} chapterCount={chaptersToShow.length}>
       <header className="mb-12 border-b border-zinc-800 pb-8">
         <p className="text-sm uppercase tracking-[0.3em] text-amber-500">
           {book.title}

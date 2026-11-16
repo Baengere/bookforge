@@ -9,13 +9,13 @@ export default function BuyPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  const returnedPurchaseId = searchParams.get("purchaseId");
+
   const [book, setBook] = useState(null);
-  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [purchased, setPurchased] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(false);
-  const [purchaseId, setPurchaseId] = useState(null);
   const [error, setError] = useState("");
 
   // Load the book
@@ -43,39 +43,30 @@ export default function BuyPage() {
     }
   }, [id]);
 
-  /*
-   * Paystack returns the customer to:
-   *
-   * /buy/BOOK_ID?purchaseId=123&email=customer@example.com
-   *
-   * We restore the email and purchase ID from the URL.
-   */
+  // Check payment after returning from Paystack
   useEffect(() => {
-    const returnedPurchaseId = searchParams.get("purchaseId");
-    const returnedEmail = searchParams.get("email");
-
-    if (returnedEmail) {
-      setEmail(returnedEmail);
-    }
-
     if (!returnedPurchaseId) {
       return;
     }
 
     const numericPurchaseId = Number(returnedPurchaseId);
 
-    if (!Number.isInteger(numericPurchaseId)) {
+    if (
+      !Number.isInteger(numericPurchaseId) ||
+      numericPurchaseId <= 0
+    ) {
       setError("Invalid purchase information.");
       return;
     }
 
-    setPurchaseId(numericPurchaseId);
     setCheckingPayment(true);
     setError("");
 
     let attempts = 0;
+    let timeoutId;
+    let cancelled = false;
 
-    const interval = setInterval(async () => {
+    async function checkPaymentStatus() {
       attempts++;
 
       try {
@@ -91,59 +82,63 @@ export default function BuyPage() {
 
         const data = await response.json();
 
+        if (cancelled) return;
+
         console.log("PAYMENT STATUS:", data);
 
-        if (data.purchased) {
-          clearInterval(interval);
+        // Authentication or invalid request
+        if (response.status === 401 || response.status === 400) {
           setCheckingPayment(false);
+          setError(
+            data.error || "Please sign in to check your purchase."
+          );
+          return;
+        }
 
-          if(data.email){
-            setEmail(data.email)
-          }
+        // Purchase not found or does not belong to this reader
+        if (data.status === "not_found") {
+          setCheckingPayment(false);
+          setError(
+            "We could not find this purchase. Please check your account and try again."
+          );
+          return;
+        }
+
+        // Payment successfully confirmed
+        if (response.ok && data.purchased) {
+          setCheckingPayment(false);
           setPurchased(true);
           return;
         }
 
-        if (data.status === "failed") {
-          clearInterval(interval);
-          setCheckingPayment(false);
-          setError(
-            "The payment was not completed. You can try again."
-          );
-          return;
-        }
-
-        if (attempts >= 20) {
-          clearInterval(interval);
-          setCheckingPayment(false);
-          setError(
-            "Your payment is still being confirmed. Please wait a moment and refresh this page."
-          );
-        }
       } catch (error) {
         console.error("PAYMENT CHECK ERROR:", error);
-
-        if (attempts >= 20) {
-          clearInterval(interval);
-          setCheckingPayment(false);
-          setError(
-            "We could not confirm the payment yet. Please refresh the page in a moment."
-          );
-        }
       }
-    }, 3000);
 
-    return () => clearInterval(interval);
-  }, [searchParams]);
+      // Continue checking while confirmation is pending.
+      // A locally failed purchase can still be recovered
+      // if the webhook later verifies a successful payment.
+      if (attempts >= 20) {
+        setCheckingPayment(false);
+        setError(
+          "Your payment is still being confirmed. Please wait a moment and refresh this page."
+        );
+        return;
+      }
 
-  async function handlePurchase() {
-    const cleanEmail = email.trim();
-
-    if (!cleanEmail) {
-      setError("Please enter your email address.");
-      return;
+      timeoutId = setTimeout(checkPaymentStatus, 3000);
     }
 
+    // Start checking immediately
+    checkPaymentStatus();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [returnedPurchaseId]);
+
+  async function handlePurchase() {
     setLoading(true);
     setError("");
 
@@ -155,7 +150,6 @@ export default function BuyPage() {
         },
         body: JSON.stringify({
           bookId: Number(id),
-          email: cleanEmail,
         }),
       });
 
@@ -175,25 +169,10 @@ export default function BuyPage() {
         );
       }
 
-      /*
-       * Keep the purchase ID and email in the callback URL.
-       *
-       * The purchase ID lets us identify the exact purchase.
-       * The email lets us restore the reader's email after
-       * Paystack sends them back.
-       */
-      const callbackUrl =
-        `/buy/${id}` +
-        `?purchaseId=${encodeURIComponent(data.purchaseId)}` +
-        `&email=${encodeURIComponent(cleanEmail)}`;
-
-      /*
-       * We cannot change Paystack's already-created callback URL here,
-       * so the initialize endpoint should create the correct callback.
-       *
-       * Redirect to Paystack.
-       */
+      // The initialization API already creates the callback URL.
+      // Redirect the reader to Paystack.
       window.location.href = data.authorizationUrl;
+
     } catch (error) {
       console.error("PAYSTACK PAYMENT ERROR:", error);
       setError(error.message);
@@ -284,9 +263,7 @@ export default function BuyPage() {
 
           <button
             onClick={() =>
-              router.push(
-                `/library/${book.id}/read?email=${encodeURIComponent(email)}`
-              )
+              router.push(`/library/${book.id}/read`)
             }
             className="mt-10 rounded-xl bg-amber-500 px-6 py-3 font-semibold text-black transition hover:bg-amber-400"
           >
@@ -340,24 +317,16 @@ export default function BuyPage() {
               </span>
             </div>
 
-            <div className="mt-8">
-              <label className="text-sm text-zinc-400">
-                Email address
-              </label>
-
-              <input
-                type="email"
-                value={email}
-                onChange={(event) =>
-                  setEmail(event.target.value)
-                }
-                placeholder="you@example.com"
-                className="mt-2 w-full rounded-lg border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-amber-500"
-              />
-            </div>
+            <p className="mt-6 text-sm text-zinc-500">
+              Your purchase will be associated with your
+              signed-in BookForge account.
+            </p>
 
             {error && (
-              <p role="alert" className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-base font-semibold leading-relaxed text-red-400">
+              <p
+                role="alert"
+                className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-4 text-base font-semibold leading-relaxed text-red-400"
+              >
                 {error}
               </p>
             )}
@@ -382,4 +351,3 @@ export default function BuyPage() {
     </main>
   );
 }
-

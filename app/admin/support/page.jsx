@@ -11,7 +11,9 @@ export default async function AdminSupportPage() {
     return (
       <main className="min-h-screen bg-[#0B0B0B] px-6 py-20 text-white">
         <div className="mx-auto max-w-xl text-center">
-          <h1 className="text-3xl font-bold">Administrator access required</h1>
+          <h1 className="text-3xl font-bold">
+            Administrator access required
+          </h1>
           <p className="mt-4 text-zinc-400">
             Sign in with the authorized BookForge administrator account
             to access support requests.
@@ -39,10 +41,29 @@ export default async function AdminSupportPage() {
           BookForge administration
         </p>
 
-        <h1 className="mt-3 text-4xl font-bold">Support requests</h1>
+        <h1 className="mt-3 text-4xl font-bold">
+          Support requests
+        </h1>
         <p className="mt-3 text-zinc-400">
           Review reader questions, payment problems, and feedback.
         </p>
+
+        {/* Administrator navigation */}
+        <nav className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href="/admin/support"
+            className="rounded-lg border border-amber-500 bg-amber-500/10 px-5 py-3 text-sm font-semibold text-amber-300"
+          >
+            Support requests
+          </Link>
+
+          <Link
+            href="/admin/payouts"
+            className="rounded-lg border border-zinc-700 px-5 py-3 text-sm font-semibold text-white transition hover:border-amber-500 hover:text-amber-300"
+          >
+            Author payouts
+          </Link>
+        </nav>
 
         <div className="mt-8 flex flex-wrap gap-3 text-sm">
           <span className="rounded-full border border-zinc-700 px-4 py-2">
@@ -58,7 +79,9 @@ export default async function AdminSupportPage() {
 
         {requests.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-zinc-800 p-8">
-            <h2 className="text-xl font-semibold">No requests yet</h2>
+            <h2 className="text-xl font-semibold">
+              No requests yet
+            </h2>
             <p className="mt-2 text-zinc-400">
               New reader messages will appear here.
             </p>

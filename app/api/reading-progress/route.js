@@ -50,9 +50,12 @@ export async function GET(request) {
 }
 
 // Save the signed-in reader's progress for a book.
+
 export async function POST(request) {
   try {
-    const userId = await getReaderId();
+    const { getUser } = getKindeServerSession();
+    const user = await getUser();
+    const userId = user?.id;
 
     if (!userId) {
       return NextResponse.json(
@@ -69,7 +72,8 @@ export async function POST(request) {
     if (
       !Number.isInteger(bookId) || bookId < 1 ||
       !Number.isInteger(chapterNumber) || chapterNumber < 1 ||
-      !Number.isInteger(position) || position < 0
+      !Number.isInteger(position) || position < 0 ||
+      position > 10000
     ) {
       return NextResponse.json(
         { error: "Invalid reading progress." },
@@ -103,6 +107,36 @@ export async function POST(request) {
         { error: "Chapter not found." },
         { status: 400 }
       );
+    }
+
+    // Chapter One is free. Later chapters require a completed purchase.
+    if (chapterNumber > 1) {
+      const email = user.email?.trim().toLowerCase();
+
+      if (!email) {
+        return NextResponse.json(
+          { error: "Unable to verify your purchase." },
+          { status: 403 }
+        );
+      }
+
+      const purchase = await prisma.purchase.findFirst({
+        where: {
+          bookId,
+          email,
+          status: "completed",
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!purchase) {
+        return NextResponse.json(
+          { error: "Purchase required to save progress in this chapter." },
+          { status: 403 }
+        );
+      }
     }
 
     const progress = await prisma.readingProgress.upsert({

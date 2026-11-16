@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client"
   output   = "../lib/generated/prisma"
@@ -7,19 +8,31 @@ datasource db {
   provider = "postgresql"
 }
 
-model Book {
-  id          Int       @id @default(autoincrement())
-  title       String
-  author      String
-  description String?
-  price       Decimal   @db.Decimal(10, 2)
-  coverImage  String?
-  ownerId     String?
-  isArchived  Boolean   @default(false)
-  createdAt   DateTime  @default(now())
+enum PayoutMethod {
+  MPESA
+  BANK
+}
 
-  chapters    Chapter[]
-  purchases   Purchase[]
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+model Book {
+  id              Int               @id @default(autoincrement())
+  title           String
+  author          String
+  description     String?
+  price           Decimal           @db.Decimal(10, 2)
+  coverImage      String?
+  ownerId         String?
+  isArchived      Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+
+  chapters        Chapter[]
+  purchases       Purchase[]
   readingProgress ReadingProgress[]
 
   @@index([ownerId])
@@ -34,11 +47,10 @@ model Chapter {
   isFree        Boolean  @default(false)
   createdAt     DateTime @default(now())
 
-  book          Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@unique([bookId, chapterNumber])
 }
-
 
 model Purchase {
   id                Int      @id @default(autoincrement())
@@ -47,12 +59,13 @@ model Purchase {
   amount            Decimal  @db.Decimal(10, 2)
   status            String   @default("completed")
   transactionId     String?
-  authorId           String?
-  processingFee      Decimal? @db.Decimal(10, 2)
-  netAmount          Decimal? @db.Decimal(10, 2)
+  authorId          String?
+  processingFee     Decimal? @db.Decimal(10, 2)
+  netAmount         Decimal? @db.Decimal(10, 2)
   platformCommission Decimal? @db.Decimal(10, 2)
-  authorEarnings     Decimal? @db.Decimal(10, 2)
-  commissionRate     Int?
+  authorEarnings    Decimal? @db.Decimal(10, 2)
+  commissionRate    Int?
+  payoutItem        PayoutItem?
   accessTokenHash   String?  @unique
   accessTokenExpiry DateTime?
   createdAt         DateTime @default(now())
@@ -61,9 +74,8 @@ model Purchase {
 
   @@index([bookId])
   @@index([email])
-  @@index([authorId])
+  @@index([authorId, status])
 }
-
 
 model ReadingProgress {
   id            Int      @id @default(autoincrement())
@@ -79,7 +91,6 @@ model ReadingProgress {
   @@index([userId])
 }
 
-
 model SupportRequest {
   id        Int      @id @default(autoincrement())
   email     String
@@ -92,4 +103,48 @@ model SupportRequest {
 
   @@index([status, createdAt])
   @@index([email])
+}
+
+model AuthorPayoutProfile {
+  id                   Int          @id @default(autoincrement())
+  authorId             String       @unique
+  payoutMethod         PayoutMethod
+  destinationEncrypted String
+  destinationLastFour  String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+}
+
+model AuthorPayout {
+  id                   Int          @id @default(autoincrement())
+  authorId             String
+  amount               Decimal      @db.Decimal(10, 2)
+  currency             String       @default("KES")
+  status               PayoutStatus @default(PENDING)
+  payoutMethod         PayoutMethod
+  destinationEncrypted String
+  destinationLastFour  String?
+  transferReference    String?      @unique
+  failureReason        String?
+  paidAt               DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  items PayoutItem[]
+
+  @@index([authorId, status])
+  @@index([createdAt])
+}
+
+model PayoutItem {
+  id         Int      @id @default(autoincrement())
+  payoutId   Int
+  purchaseId Int      @unique
+  amount     Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  payout AuthorPayout @relation(fields: [payoutId], references: [id], onDelete: Restrict)
+  purchase Purchase   @relation(fields: [purchaseId], references: [id], onDelete: Restrict)
+
+  @@index([payoutId])
 }

@@ -213,7 +213,9 @@ export async function POST(request) {
     const updated = await prisma.purchase.updateMany({
       where: {
         id: purchase.id,
-        status: "pending",
+        status: {
+          in:["pending","failed"]
+        },
       },
       data: {
         status: "completed",

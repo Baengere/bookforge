@@ -1,51 +1,60 @@
+
 import { prisma } from "@/lib/prisma";
+import { getKindeServerSession } from "@kinde-oss/kinde-auth-nextjs/server";
 
 export async function POST(request) {
   try {
-    const body = await request.json();
+    // Identify the signed-in reader
+    const { getUser } = await getKindeServerSession();
+    const user = await getUser();
 
-    const purchaseId = Number(body.purchaseId);
-    const bookId = Number(body.bookId);
-    const email = body.email;
-
-    if (purchaseId) {
-      const purchase = await prisma.purchase.findUnique({
-        where: {
-          id: purchaseId,
-        },
-      });
-
-      return Response.json({
-        purchased: purchase?.status === "completed",
-        status: purchase?.status || "not_found",
-        email:purchase?.status === "completed"
-        ? purchase.email:null
-      });
+    if (!user?.email) {
+      return Response.json(
+        { error: "Please sign in to check your purchase." },
+        { status: 401 }
+      );
     }
 
-    if (!bookId || !email) {
+    const body = await request.json();
+    const purchaseId = Number(body.purchaseId);
+
+    if (!Number.isInteger(purchaseId) || purchaseId <= 0) {
       return Response.json(
-        { purchased: false },
+        { error: "A valid purchase ID is required." },
         { status: 400 }
       );
     }
 
+    // Find the purchase only if it belongs to this reader
     const purchase = await prisma.purchase.findFirst({
       where: {
-        bookId,
-        email:{equals:email, mode:"insensitive"},
-        status: "completed",
+        id: purchaseId,
+        email: {
+          equals: user.email,
+          mode: "insensitive",
+        },
+      },
+      select: {
+        status: true,
       },
     });
 
+    if (!purchase) {
+      return Response.json(
+        { purchased: false, status: "not_found" }
+      );
+    }
+
     return Response.json({
-      purchased: !!purchase,
+      purchased: purchase.status === "completed",
+      status: purchase.status,
     });
+
   } catch (error) {
     console.error("PURCHASE CHECK ERROR:", error);
 
     return Response.json(
-      {error: "Could not check purchase"},
+      { error: "Could not check purchase." },
       { status: 500 }
     );
   }
